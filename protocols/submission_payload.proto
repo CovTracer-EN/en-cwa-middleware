@@ -1,0 +1,12 @@
+syntax = "proto3";
+package protocols;
+option go_package = ".;protocols";
+import "temporary_exposure_key_export.proto";
+
+message SubmissionPayload {
+  repeated TemporaryExposureKey keys = 1;
+  optional bytes requestPadding = 2;
+  repeated string visitedCountries = 3;
+  optional string origin = 4;
+  optional bool consentToFederation = 5;
+}

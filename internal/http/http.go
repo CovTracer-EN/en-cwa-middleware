@@ -26,17 +26,14 @@ func Run() (err error) {
 		// GAEN - React
 		apiPublic.POST("/publish", PostPublish)
 
-		apiPublic.POST("/verify", PostVerify)
+		apiPublic.POST("/api/verify", PostVerify)
 
-		apiPublic.POST("/certificate", PostCertificate)
-
-		// GAEN - Native (not 100% clear yet)
-		//apiPublic.POST("/publish", PostPublish)
+		apiPublic.POST("/api/certificate", PostCertificate)
 
 		apiPublic.GET("/download", GetDownload)
 
 		apiPublic.GET("/configuration", GetConfiguration)
 	}
 
-	return router.Run()
+	return router.Run(os.Getenv("port"))
 }
