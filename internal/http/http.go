@@ -30,7 +30,7 @@ func Run() (err error) {
 
 		apiPublic.POST("/api/certificate", PostCertificate)
 
-		apiPublic.GET("/download", GetDownload)
+		apiPublic.GET("/download/cyprus/tek", GetDownload)
 
 		apiPublic.GET("/configuration", GetConfiguration)
 	}
