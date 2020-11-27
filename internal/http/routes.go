@@ -2,6 +2,7 @@ package http
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -41,8 +42,16 @@ func PostPublish(c *gin.Context) {
 	temporaryExposureKeys := make([]*protocols.TemporaryExposureKey, len(body.Keys))
 	for i := 0; i < len(body.Keys); i++ {
 		transmissionRisk := int32(body.Keys[i].TransmissionRisk)
+
+		keyData, err2 := base64.StdEncoding.DecodeString(body.Keys[i].Key)
+		if err2 != nil {
+			log.Print(err2)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
 		temporaryExposureKey := protocols.TemporaryExposureKey{
-			KeyData:                    []byte(body.Keys[i].Key),
+			KeyData:                    keyData,
 			TransmissionRiskLevel:      &transmissionRisk,
 			RollingStartIntervalNumber: &body.Keys[i].IntervalNumber,
 			RollingPeriod:              &body.Keys[i].IntervalCount,
