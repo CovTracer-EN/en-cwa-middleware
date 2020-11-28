@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -19,8 +20,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang/protobuf/proto"
 	"github.com/google/exposure-notifications-server/pkg/api/v1"
-	"github.com/lib/pq"
+	_ "github.com/lib/pq"
 )
+
+type PathCheckConfig struct {
+	DailySummariesConfig             DailySummariesConfig `json:"DailySummariesConfig"`
+	TriggerThresholdWeightedDuration int64                `json:"triggerThresholdWeightedDuration"`
+}
+
+type DailySummariesConfig struct {
+	AttenuationDurationThresholds           []int64   `json:"attenuationDurationThresholds"`
+	AttenuationBucketWeights                []float64 `json:"attenuationBucketWeights"`
+	ReportTypeWeights                       []float64 `json:"reportTypeWeights"`
+	ReportTypeWhenMissing                   int64     `json:"reportTypeWhenMissing"`
+	InfectiousnessWeights                   []float64 `json:"infectiousnessWeights"`
+	DaysSinceOnsetToInfectiousness          [][]int64 `json:"daysSinceOnsetToInfectiousness"`
+	InfectiousnessWhenDaysSinceOnsetMissing int64     `json:"infectiousnessWhenDaysSinceOnsetMissing"`
+}
 
 func GetHealth(c *gin.Context) {
 	c.Status(http.StatusOK)
@@ -37,15 +53,15 @@ func PostPublish(c *gin.Context) {
 	reportType := protocols.ReportType_CONFIRMED_TEST
 
 	//TODO: Find how we will get this info
-	daysSinceOnsetOfSymptoms := int32(0)
+	daysSinceOnsetOfSymptoms := int32(4000)
 
 	temporaryExposureKeys := make([]*protocols.TemporaryExposureKey, len(body.Keys))
 	for i := 0; i < len(body.Keys); i++ {
 		transmissionRisk := int32(body.Keys[i].TransmissionRisk)
 
-		keyData, err2 := base64.StdEncoding.DecodeString(body.Keys[i].Key)
-		if err2 != nil {
-			log.Print(err2)
+		keyData, err := base64.StdEncoding.DecodeString(body.Keys[i].Key)
+		if err != nil {
+			log.Print(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
@@ -218,19 +234,11 @@ func GetConfiguration(c *gin.Context) {
 	}
 
 	version := os.Getenv("version")
-	var pathCheckConfig types.PathCheckConfig
+	var pathCheckConfig PathCheckConfig
 
 	err = db.
 		QueryRow("SELECT * FROM exposure_configuration WHERE version = $1", version).
-		Scan(&version,
-			&pathCheckConfig.MinimumRiskScore,
-			pq.Array(&pathCheckConfig.AttenuationDurationThresholds),
-			pq.Array(&pathCheckConfig.AttenuationLevelValues),
-			pq.Array(&pathCheckConfig.DaysSinceLastExposureLevelValues),
-			pq.Array(&pathCheckConfig.DurationLevelValues),
-			pq.Array(&pathCheckConfig.TransmissionRiskLevelValues),
-			pq.Array(&pathCheckConfig.AttenuationBucketWeights),
-			&pathCheckConfig.TriggerThresholdWeightedDuration)
+		Scan(&version, &pathCheckConfig)
 	if err != nil {
 		log.Println(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -238,4 +246,13 @@ func GetConfiguration(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, pathCheckConfig)
+}
+
+func (a *PathCheckConfig) Scan(value interface{}) error {
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+
+	return json.Unmarshal(b, &a)
 }
