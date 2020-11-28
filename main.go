@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/rise-center/en-cwa-middleware/internal/http"
 
@@ -17,6 +19,8 @@ func main() {
 	if err := godotenv.Load(envPath); err != nil {
 		log.Fatal(err)
 	}
+
+	rand.Seed(time.Now().UnixNano())
 
 	if err := http.Run(); err != nil {
 		log.Fatal(err)

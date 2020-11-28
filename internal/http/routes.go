@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -124,7 +125,8 @@ func PostPublish(c *gin.Context) {
 
 	log.Println(res.Status(), message)
 	c.JSON(res.StatusCode(), v1.PublishResponse{
-		RevisionToken:     "",
+		// TODO: Change to a real revisionToken to revoke tests
+		RevisionToken:     fmt.Sprintf("%d", rand.Int()),
 		InsertedExposures: 0,
 		ErrorMessage:      message,
 		Code:              res.Status(),
