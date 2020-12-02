@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rise-center/en-cwa-middleware/internal/utils"
@@ -189,6 +190,29 @@ func PostCertificate(c *gin.Context) {
 }
 
 func GetDownload(c *gin.Context) {
+	filename := c.Param("filename")
+
+	// index.txt - content is a list of key group files on the CDN (currently we have them split in 12h chunks)
+	if filename == "index.txt" {
+		// TODO: Replace with CDN data
+		content := strings.Join([]string{
+			"cyprus/teks/1605686400-1605700800-00001.zip",
+			"cyprus/teks/1605700800-1605715200-00001.zip",
+			"cyprus/teks/1605715200-1605729600-00001.zip",
+			"cyprus/teks/1605729600-1605744000-00001.zip",
+			"cyprus/teks/1605744000-1605758400-00001.zip",
+			"cyprus/teks/1605758400-1605772800-00001.zip",
+			"cyprus/teks/1605772800-1605787200-00001.zip",
+			"cyprus/teks/1605787200-1605801600-00001.zip",
+			"cyprus/teks/1605801600-1605816000-00001.zip",
+		}, "\n")
+
+		c.String(http.StatusOK, content)
+		return
+	}
+
+	// TODO: forward filename (e.g. 1605686400-1605700800-00001.zip) to download specific 12h window keys
+
 	//TODO: Currently downloading 1 day before
 	date := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
 	res, err := http.Get(os.Getenv("CWADownloadUrl") + "/date/" + date)
