@@ -6,6 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/golang/protobuf/proto"
+	"github.com/google/exposure-notifications-server/pkg/api/v1"
+	_ "github.com/lib/pq"
+	"github.com/rise-center/en-cwa-middleware/internal/utils"
+	"github.com/rise-center/en-cwa-middleware/pkg/types"
+	"github.com/rise-center/en-cwa-middleware/protocols"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -14,15 +21,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/rise-center/en-cwa-middleware/internal/utils"
-	"github.com/rise-center/en-cwa-middleware/pkg/types"
-	"github.com/rise-center/en-cwa-middleware/protocols"
-
-	"github.com/gin-gonic/gin"
-	"github.com/golang/protobuf/proto"
-	"github.com/google/exposure-notifications-server/pkg/api/v1"
-	_ "github.com/lib/pq"
 )
 
 type PathCheckConfig struct {
@@ -191,31 +189,34 @@ func PostCertificate(c *gin.Context) {
 
 func GetDownload(c *gin.Context) {
 	filename := c.Param("filename")
-
-	// index.txt - content is a list of key group files on the CDN (currently we have them split in 12h chunks)
 	if filename == "index.txt" {
-		// TODO: Replace with CDN data
-		content := strings.Join([]string{
-			"cyprus/teks/1605686400-1605700800-00001.zip",
-			"cyprus/teks/1605700800-1605715200-00001.zip",
-			"cyprus/teks/1605715200-1605729600-00001.zip",
-			"cyprus/teks/1605729600-1605744000-00001.zip",
-			"cyprus/teks/1605744000-1605758400-00001.zip",
-			"cyprus/teks/1605758400-1605772800-00001.zip",
-			"cyprus/teks/1605772800-1605787200-00001.zip",
-			"cyprus/teks/1605787200-1605801600-00001.zip",
-			"cyprus/teks/1605801600-1605816000-00001.zip",
-		}, "\n")
+		now := time.Now()
+		now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location()).AddDate(0, 0, -1)
 
-		c.String(http.StatusOK, content)
+		var files []string
+		for i := 0; i < 7; i++ {
+			from := now.Add(time.Hour * time.Duration(i*-1))
+			to := from.Add(time.Hour)
+
+			file := fmt.Sprintf("cyprus/teks/%d-%d-00001.zip", from.Unix(), to.Unix())
+			files = append(files, file)
+		}
+
+		c.JSON(http.StatusOK, files)
 		return
 	}
 
-	// TODO: forward filename (e.g. 1605686400-1605700800-00001.zip) to download specific 12h window keys
+	fromStr := strings.Split(filename, "-")[0]
+	fromInt, err := strconv.ParseInt(fromStr, 10, 64)
+	if err != nil {
+		log.Println(err)
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 
-	//TODO: Currently downloading 1 day before
-	date := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
-	res, err := http.Get(os.Getenv("CWADownloadUrl") + "/date/" + date)
+	from := time.Unix(fromInt, 0)
+	link := fmt.Sprintf(os.Getenv("CWADownloadUrl")+"/date/"+from.Format("2006-01-02")+"/hour/%d", from.Hour())
+	res, err := http.Get(link)
 	if err != nil {
 		log.Println(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
