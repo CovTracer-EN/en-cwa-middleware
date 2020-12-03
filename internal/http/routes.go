@@ -190,19 +190,43 @@ func PostCertificate(c *gin.Context) {
 func GetDownload(c *gin.Context) {
 	filename := c.Param("filename")
 	if filename == "index.txt" {
-		now := time.Now()
-		now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, now.Location()).AddDate(0, 0, -1)
+		psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+			os.Getenv("DatabaseHost"),
+			os.Getenv("DatabasePort"),
+			os.Getenv("DatabaseUser"),
+			os.Getenv("DatabasePass"),
+			os.Getenv("DatabaseName"))
 
-		var files []string
-		for i := 0; i < 7; i++ {
-			from := now.Add(time.Hour * time.Duration(i*-1))
-			to := from.Add(time.Hour)
-
-			file := fmt.Sprintf("cyprus/teks/%d-%d-00001.zip", from.Unix(), to.Unix())
-			files = append(files, file)
+		db, err := sql.Open("postgres", psqlInfo)
+		if err != nil {
+			log.Print(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
 		}
 
-		c.JSON(http.StatusOK, files)
+		err = db.Ping()
+		if err != nil {
+			log.Print(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		var content string
+		err = db.
+			QueryRow("SELECT content FROM index_file").
+			Scan(&content)
+		if err != nil {
+			log.Println(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		file := strings.Split(content, "\n")
+		for i := 0; i < len(file); i++ {
+			file[i] = fmt.Sprintf("cyprus/teks/%s-00001.zip", file[i])
+		}
+
+		c.JSON(http.StatusOK, file)
 		return
 	}
 
