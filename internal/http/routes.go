@@ -221,7 +221,7 @@ func GetDownload(c *gin.Context) {
 			return
 		}
 
-		file := strings.Split(content, "\n")
+		file := strings.Split(strings.TrimSuffix(content, "\n"), "\n")
 		for i := 0; i < len(file); i++ {
 			file[i] = fmt.Sprintf("cyprus/teks/%s-00001.zip", file[i])
 		}
