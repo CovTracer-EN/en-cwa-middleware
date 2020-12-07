@@ -226,6 +226,7 @@ func GetDownload(c *gin.Context) {
 			file[i] = fmt.Sprintf("cyprus/teks/%s-00001.zip", file[i])
 		}
 
+		defer db.Close()
 		c.JSON(http.StatusOK, file)
 		return
 	}
@@ -296,6 +297,7 @@ func GetConfiguration(c *gin.Context) {
 		return
 	}
 
+	defer db.Close()
 	c.JSON(http.StatusOK, pathCheckConfig)
 }
 
