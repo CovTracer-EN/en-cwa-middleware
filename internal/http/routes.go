@@ -116,6 +116,17 @@ func PostPublish(c *gin.Context) {
 	var message string
 	if res.StatusCode() == 200 {
 		message = "Submission payload processed successfully."
+		for i := 0; i < len(temporaryExposureKeys); i++ {
+			log.Println("KeyData:", string(submissionPayload.Keys[i].KeyData))
+			log.Println("TransmissionRiskLevel:", *submissionPayload.Keys[i].TransmissionRiskLevel)
+			log.Println("RollingStartIntervalNumber:", *submissionPayload.Keys[i].RollingStartIntervalNumber)
+			log.Println("RollingPeriod:", *submissionPayload.Keys[i].RollingPeriod)
+			log.Println("ReportType:", *submissionPayload.Keys[i].ReportType)
+			log.Println("DaysSinceOnsetOfSymptoms:", *submissionPayload.Keys[i].DaysSinceOnsetOfSymptoms)
+			log.Println("VisitedCountries:", submissionPayload.VisitedCountries)
+			log.Println("Origin:", *submissionPayload.Origin)
+			log.Println("ConsentToFederation:", *submissionPayload.ConsentToFederation)
+		}
 	} else if res.StatusCode() == 400 {
 		message = "Invalid payload or missing CWA headers."
 	} else if res.StatusCode() == 403 {
@@ -263,6 +274,7 @@ func GetDownload(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+	log.Println("[Requested zip]", link)
 }
 
 func GetConfiguration(c *gin.Context) {
@@ -301,6 +313,7 @@ func GetConfiguration(c *gin.Context) {
 
 	defer db.Close()
 	c.JSON(http.StatusOK, pathCheckConfig)
+	log.Println("Configuration requested")
 }
 
 func (a *PathCheckConfig) Scan(value interface{}) error {
