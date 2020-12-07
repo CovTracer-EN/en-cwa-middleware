@@ -229,7 +229,7 @@ func GetDownload(c *gin.Context) {
 
 		data := strings.Join(file, "\n")
 
-		c.JSON(http.StatusOK, data)
+		c.String(http.StatusOK, data)
 		return
 	}
 
