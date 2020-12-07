@@ -203,6 +203,7 @@ func GetDownload(c *gin.Context) {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
+		defer db.Close()
 
 		err = db.Ping()
 		if err != nil {
@@ -226,8 +227,9 @@ func GetDownload(c *gin.Context) {
 			file[i] = fmt.Sprintf("cyprus/teks/%s-00001.zip", file[i])
 		}
 
-		defer db.Close()
-		c.JSON(http.StatusOK, file)
+		data := strings.Join(file, "\n")
+
+		c.JSON(http.StatusOK, data)
 		return
 	}
 
