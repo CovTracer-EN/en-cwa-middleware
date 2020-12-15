@@ -291,6 +291,7 @@ func GetConfiguration(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
@@ -299,19 +300,16 @@ func GetConfiguration(c *gin.Context) {
 		return
 	}
 
-	version := os.Getenv("version")
 	var pathCheckConfig PathCheckConfig
-
 	err = db.
-		QueryRow("SELECT * FROM exposure_configuration WHERE version = $1", version).
-		Scan(&version, &pathCheckConfig)
+		QueryRow("SELECT config FROM exposure_configuration").
+		Scan(&pathCheckConfig)
 	if err != nil {
 		log.Println(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	defer db.Close()
 	c.JSON(http.StatusOK, pathCheckConfig)
 	log.Println("Configuration requested")
 }
