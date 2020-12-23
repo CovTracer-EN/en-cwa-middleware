@@ -51,10 +51,7 @@ func PostPublish(c *gin.Context) {
 	}
 
 	reportType := protocols.ReportType_CONFIRMED_TEST
-
-	//TODO: Find how we will get this info
-	daysSinceOnsetOfSymptoms := int32(4000)
-
+	daysSinceOnsetOfSymptoms := utils.CalculateDSOSVector(body.VerificationPayload)
 	temporaryExposureKeys := make([]*protocols.TemporaryExposureKey, len(body.Keys))
 	for i := 0; i < len(body.Keys); i++ {
 		transmissionRisk := int32(body.Keys[i].TransmissionRisk)
@@ -72,7 +69,7 @@ func PostPublish(c *gin.Context) {
 			RollingStartIntervalNumber: &body.Keys[i].IntervalNumber,
 			RollingPeriod:              &body.Keys[i].IntervalCount,
 			ReportType:                 &reportType,
-			DaysSinceOnsetOfSymptoms:   &daysSinceOnsetOfSymptoms,
+			DaysSinceOnsetOfSymptoms:   &daysSinceOnsetOfSymptoms[i],
 		}
 		temporaryExposureKeys[i] = &temporaryExposureKey
 	}
