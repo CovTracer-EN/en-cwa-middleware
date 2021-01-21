@@ -56,11 +56,11 @@ func PostPublish(c *gin.Context) {
 	daysSinceOnsetOfSymptoms := utils.CalculateDSOSVector(body.VerificationPayload)
 	temporaryExposureKeys := make([]*protocols.TemporaryExposureKey, len(body.Keys))
 
-	count := len(body.Keys)
-	if count > MaxPublishKeysCount {
-		count = MaxPublishKeysCount
+	startIndex := 0
+	if len(body.Keys) > MaxPublishKeysCount {
+		startIndex = len(body.Keys) - MaxPublishKeysCount
 	}
-	for i := 0; i < count; i++ {
+	for i := startIndex; i < len(body.Keys); i++ {
 		transmissionRisk := int32(body.Keys[i].TransmissionRisk)
 		if transmissionRisk == 0 {
 			transmissionRisk++
