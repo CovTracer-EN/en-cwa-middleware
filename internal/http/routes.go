@@ -38,6 +38,8 @@ type DailySummariesConfig struct {
 	InfectiousnessWhenDaysSinceOnsetMissing int64     `json:"infectiousnessWhenDaysSinceOnsetMissing"`
 }
 
+const MaxPublishKeysCount = 14
+
 func GetHealth(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
@@ -53,8 +55,17 @@ func PostPublish(c *gin.Context) {
 	reportType := protocols.ReportType_CONFIRMED_TEST
 	daysSinceOnsetOfSymptoms := utils.CalculateDSOSVector(body.VerificationPayload)
 	temporaryExposureKeys := make([]*protocols.TemporaryExposureKey, len(body.Keys))
-	for i := 0; i < len(body.Keys); i++ {
-		transmissionRisk := int32(1)
+
+	count := len(body.Keys)
+	if count > MaxPublishKeysCount {
+		count = MaxPublishKeysCount
+	}
+	for i := 0; i < count; i++ {
+		transmissionRisk := int32(body.Keys[i].TransmissionRisk)
+		if transmissionRisk == 0 {
+			transmissionRisk++
+		}
+
 		keyData, err := base64.StdEncoding.DecodeString(body.Keys[i].Key)
 		if err != nil {
 			log.Print(err)
