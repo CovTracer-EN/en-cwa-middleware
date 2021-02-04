@@ -18,6 +18,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -56,17 +57,20 @@ func PostPublish(c *gin.Context) {
 	daysSinceOnsetOfSymptoms := utils.CalculateDSOSVector(body.VerificationPayload)
 	temporaryExposureKeys := make([]*protocols.TemporaryExposureKey, len(body.Keys))
 
-	startIndex := 0
-	if len(body.Keys) > MaxPublishKeysCount {
-		startIndex = len(body.Keys) - MaxPublishKeysCount
+	exposureKeys := body.Keys
+	sort.Slice(exposureKeys, func(i, j int) bool {
+		return exposureKeys[i].IntervalNumber < exposureKeys[j].IntervalNumber
+	})
+	if len(exposureKeys) > MaxPublishKeysCount {
+		exposureKeys = exposureKeys[len(exposureKeys) - MaxPublishKeysCount:]
 	}
-	for i := startIndex; i < len(body.Keys); i++ {
-		transmissionRisk := int32(body.Keys[i].TransmissionRisk)
+	for i, key := range exposureKeys {
+		transmissionRisk := int32(key.TransmissionRisk)
 		if transmissionRisk == 0 {
 			transmissionRisk++
 		}
 
-		keyData, err := base64.StdEncoding.DecodeString(body.Keys[i].Key)
+		keyData, err := base64.StdEncoding.DecodeString(key.Key)
 		if err != nil {
 			log.Print(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -76,8 +80,8 @@ func PostPublish(c *gin.Context) {
 		temporaryExposureKey := protocols.TemporaryExposureKey{
 			KeyData:                    keyData,
 			TransmissionRiskLevel:      &transmissionRisk,
-			RollingStartIntervalNumber: &body.Keys[i].IntervalNumber,
-			RollingPeriod:              &body.Keys[i].IntervalCount,
+			RollingStartIntervalNumber: &key.IntervalNumber,
+			RollingPeriod:              &key.IntervalCount,
 			ReportType:                 &reportType,
 			DaysSinceOnsetOfSymptoms:   &daysSinceOnsetOfSymptoms[i],
 		}
