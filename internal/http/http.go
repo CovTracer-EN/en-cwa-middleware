@@ -17,6 +17,9 @@ func Run() (err error) {
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowAllOrigins = true // TODO: Dev
 
+	// Static files
+	router.Static("/static", "./static")
+
 	// Public routes: /
 	apiPublic := router.Group("/")
 	apiPublic.Use(cors.New(corsConfig))
