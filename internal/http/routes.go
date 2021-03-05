@@ -18,7 +18,6 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -39,8 +38,6 @@ type DailySummariesConfig struct {
 	InfectiousnessWhenDaysSinceOnsetMissing int64     `json:"infectiousnessWhenDaysSinceOnsetMissing"`
 }
 
-const MaxPublishKeysCount = 14
-
 func GetHealth(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
@@ -54,23 +51,18 @@ func PostPublish(c *gin.Context) {
 	}
 
 	reportType := protocols.ReportType_CONFIRMED_TEST
-	daysSinceOnsetOfSymptoms := utils.CalculateDSOSVector(body.VerificationPayload)
+
 	temporaryExposureKeys := make([]*protocols.TemporaryExposureKey, len(body.Keys))
 
-	exposureKeys := body.Keys
-	sort.Slice(exposureKeys, func(i, j int) bool {
-		return exposureKeys[i].IntervalNumber < exposureKeys[j].IntervalNumber
-	})
-	if len(exposureKeys) > MaxPublishKeysCount {
-		exposureKeys = exposureKeys[len(exposureKeys) - MaxPublishKeysCount:]
-	}
-	for i, key := range exposureKeys {
-		transmissionRisk := int32(key.TransmissionRisk)
+
+	daysSinceOnsetOfSymptoms := utils.CalculateDSOSVector(body.VerificationPayload)
+	startIndex := 0
+	for  i := startIndex; i < len(body.Keys); i++ {
+		transmissionRisk := int32(body.Keys[i].TransmissionRisk)
 		if transmissionRisk == 0 {
 			transmissionRisk++
 		}
-
-		keyData, err := base64.StdEncoding.DecodeString(key.Key)
+		keyData, err := base64.StdEncoding.DecodeString(body.Keys[i].Key)
 		if err != nil {
 			log.Print(err)
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -80,10 +72,10 @@ func PostPublish(c *gin.Context) {
 		temporaryExposureKey := protocols.TemporaryExposureKey{
 			KeyData:                    keyData,
 			TransmissionRiskLevel:      &transmissionRisk,
-			RollingStartIntervalNumber: &key.IntervalNumber,
-			RollingPeriod:              &key.IntervalCount,
+			RollingStartIntervalNumber: &body.Keys[i].IntervalNumber,
+			RollingPeriod:              &body.Keys[i].IntervalCount,
 			ReportType:                 &reportType,
-			DaysSinceOnsetOfSymptoms:   &daysSinceOnsetOfSymptoms[i],
+			DaysSinceOnsetOfSymptoms:   &daysSinceOnsetOfSymptoms[len(body.Keys) - i - 1],
 		}
 		temporaryExposureKeys[i] = &temporaryExposureKey
 	}
@@ -108,6 +100,7 @@ func PostPublish(c *gin.Context) {
 	if err != nil {
 		log.Println(err)
 		c.AbortWithStatus(http.StatusInternalServerError)
+
 		return
 	}
 
@@ -127,7 +120,7 @@ func PostPublish(c *gin.Context) {
 	var message string
 	if res.StatusCode() == 200 {
 		message = "Submission payload processed successfully."
-		for i := 0; i < len(temporaryExposureKeys); i++ {
+		for i := 0; i < len(body.Keys); i++ {
 			log.Println("KeyData:", string(submissionPayload.Keys[i].KeyData))
 			log.Println("TransmissionRiskLevel:", *submissionPayload.Keys[i].TransmissionRiskLevel)
 			log.Println("RollingStartIntervalNumber:", *submissionPayload.Keys[i].RollingStartIntervalNumber)
@@ -174,6 +167,7 @@ func PostVerify(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+
 	if res.StatusCode() != 200 {
 		log.Println(res.StatusCode(), res.Status())
 		c.AbortWithStatus(http.StatusInternalServerError)
