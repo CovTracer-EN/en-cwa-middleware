@@ -63,12 +63,12 @@ func CalculateDSOSVector(otp string) (dsosVector [15]int32) {
 	}
 
 	var _symptoms int
-	var _range sql.NullInt32
+	var _testDate sql.NullTime
 	var _symptomDate sql.NullTime
 
 	err = db.
-		QueryRow("SELECT \"symptomDate\", \"symptoms\", \"range\" FROM access_codes WHERE code = $1", otp).
-		Scan(&_symptomDate, &_symptoms, &_range)
+		QueryRow("SELECT \"symptomDate\", \"symptoms\", \"testDate\" FROM access_codes WHERE code = $1", otp).
+		Scan(&_symptomDate, &_symptoms, &_testDate)
 	if err != nil {
 		log.Println(err)
 		return
@@ -81,28 +81,21 @@ func CalculateDSOSVector(otp string) (dsosVector [15]int32) {
 		if _symptomDate.Valid { //yes, specific date is known
 			dsos = int32(math.Ceil(time.Now().Sub(_symptomDate.Time).Hours() / 24))
 		} else {
-			if _range.Valid {
-				if _range.Int32 == 0 { //last seven days
-					dsos = 701
-				} else if _range.Int32 == 1 { //one to two weeks ago
-					dsos = 708
-				} else if _range.Int32 == 2 { //more than two weeks
-					dsos = 715
-				}
-			} else { //no
-				dsos = 2000
+			if _testDate.Valid {
+				dsos = int32(math.Ceil(time.Now().Sub(_testDate.Time).Hours() / 24) + 2000)
 			}
 		}
 	} else if _symptoms == 1 { //unknown
 		dsos = 4000
 	} else if _symptoms == 2 { //no
-		dsos = 3000
+		if _testDate.Valid {
+			dsos = int32(math.Ceil(time.Now().Sub(_testDate.Time).Hours() / 24) + 3000)
+		}
 	}
 
 	for i := 0; i < len(dsosVector); i++ {
 		dsosVector[i] = dsos
 		dsos -= 1
 	}
-
 	return dsosVector
 }
