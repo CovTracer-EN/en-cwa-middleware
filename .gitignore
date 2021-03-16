@@ -1,4 +1,5 @@
 en-cwa
+.env*
+
 .idea
-.env
-.envtesten-cwa-middleware.iml
+en-cwa-middleware.iml
