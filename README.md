@@ -1,5 +1,5 @@
 # en-cwa-middleware
-"Google Exposure Notification Server" - "Corona Warn App Server" middleware
+"Google Exposure Notification Server" - "Corona Warn App Server" middleware.
 
 ## Production
 ### Run
